@@ -1,0 +1,106 @@
+\section{Current state of the problem}
+There are 2 parts of the problem. First, we nee to solve the transport
+equation for the photons and the electrons and then, we need to solve an
+optimization problem.
+\subsection{Transport equation for the photons and the electrons}
+The equation that we want to solve is the Boltzmann-CSD equation (the
+variables are omitted for \hbox{brevity) :}
+\begin{equation}
+\begin{split}
+\bo \cdot \bn \Psi + \Sigma_t \Psi &= \int_{4\pi}\int_0^{\infty}
+\Sigma_s\(\bo\cdot\bo', E'\rightarrow E\)\Psi\(\bo',E'\)dE' d\bo'\\
+&+\frac{\partial S \Psi}{\partial E} +Q
+\label{b-csd}
+\end{split}
+\end{equation}
+where :
+\begin{itemize}
+\item $\Psi$ is the angular flux
+\item $\Sigma_t$ is the smooth-component of the total macroscopic cross
+section
+\item $\Sigma_s$ is the smooth-component of the macroscopic differential
+scattering cross section
+\item $Q$ is a volumetric source
+\item $\mu$ is the cosine of the directional polar angle
+\item $\phi$ is the directional azimuthal angle
+\item $S$ is the restricted stopping power :
+\begin{equation}
+S(E) = 2\pi \int_0^E \int_{-1}^1 \Sigma_{ss} (E\rightarrow E',\mu_0)
+\(E-E'\)d\mu_0 dE'
+\end{equation}
+\item $\mu_0 = \mu' \mu + \sqrt{\(1-\mu'^2\)\(1-\mu^2\)} \cos\(\phi'-\phi\)$
+\item $\Sigma_{ss}\(E\rightarrow E', \mu_0\)$ denotes the forward-peaked
+scattering cross section.
+\end{itemize}
+Standard boundary conditions can be applied to (\ref{b-csd}), the most likely
+being the vacuum boundary conditions :
+\begin{equation}
+\Psi(\br,\bo,E) = 0\ \textrm{ for } \bo \cdot \bs{n} < 0 \ \textrm { and } \br
+\in \partial \mathcal{D}_v
+\end{equation}
+and the incoming flux boundary conditions :
+\begin{equation}
+\Psi(\br,\bo,E) = g(\br,\bo,E)\ \textrm{ for } \bo \cdot \bs{n} < 0 \ \textrm { and } \br \in \partial \mathcal{D}_i
+\end{equation}
+where $\partial \mathcal{D}_v$ is the boundary of the domain where vacuum
+conditions are applied and $\partial \mathcal{D}_i$ is the boundary of the
+domain where incoming flux conditions are applied.\\
+The state-of-art for deterministic electron-photon calculation is the code
+Acuros\cite{acuros}. It employs linear discontinuous finite-element on
+unstructured mesh consisting of tetrahedral elements. It uses a discrete ordinates
+method with analytical uncollided flux. It uses adaptive mesh refinement. The
+energy discretization is done with standard multigroup method and the
+energy derivative of the CSD operator is discretized using linear
+discontinuous finite-element.
+
+\subsubsection{Optimization problem}
+The modern radiotherapy uses the Intensity Modulated Radiation Therapy (IMRT) as 
+one of the methods to treat cancer. IMRT allows to have several beams with 
+different intensity profiles. The goal is to give a sufficient dose to the tumor 
+while sparing healthy organs. To optimize the intensity profile, it is very common 
+to divide the beams in small beamlets. Each beamlet has a constant intensity. In a 
+real application, the number of beamlets is around a thousand. 
+
+This problem is very complex and a lot of objective functions and constraints 
+\cite{math}, \cite{complexity}, \cite{minima},\cite{dose-volume} have been 
+proposed. Moreover, there is a lot of methods \cite{dose-volume} used to solve 
+these optimization problems.
+
+The most used objective function is :
+\begin{equation}
+\min  \sum_{(i,j,k)\in \mathcal{T}} \(D_{ijk}-\delta_{ijk}\)^2 
+\label{objective}
+\end{equation}
+where $\delta_{ij}$ is the prescribed dose for the voxel $ijk$, $D_{ijk}$ is the
+actual dose for the voxel and $\mathcal{T}$ is the tumor. 
+
+So we want to minimize the difference between the planned dose and the dose in the 
+tumor. The constraints used are dose-volume constraints \cite{complexity}, 
+\cite{minima} and \cite{dose-volume}. The idea is that we do not want have more than 
+a given percentage of the volume of an organ to receive more than a given dose. 
+Mathematically, we have for each constraint :
+\begin{equation} 
+\sum_{ijk \in \mathcal{D}} \nu\(D_{ijk}-\delta_{ijk}\)\frac{V_{ijk}}{V} \leq \gamma
+\label{constraint}
+\end{equation}
+where $V_{ij}$ is the volume of voxel $ij$, $V$ is the total volume of the organ, 
+$\nu(x)$ is the Heaviside function, $\gamma$ is the tolerance percentage
+volume and $\mathcal{D}$ is the domain studied. We also impose the dose to be 
+positive or zero :
+\begin{equation}
+D_{ij} \geq 0
+\label{constraint2}
+\end{equation}
+
+It is well known that even if the objective function is convex, the problem has 
+several local minima \cite{minima}. The reason is that the domain is not convex. 
+The number of local minima can increase factorially with the number of beamlets. 
+Since we can have more than a thousand of beamlets, we see that the number of local 
+minima can be huge. We can also write the problem as a mixed-integer linear problem. 
+This kind of problem does not have the problem of having a lot of local minima but 
+the calculation time can be prohibitive \cite{minima}. Among the methods which
+have been used, there is Monte-Carlo method with steepest descent
+\cite{complexity}, linear programming, filtered back-projection, simulated
+annealing, dynamically penalized likelihood, projections onto convex, active
+set method and simulated dynamics\cite{dose-volume}. 
+

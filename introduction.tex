@@ -1,1 +1,45 @@
 \section{Introduction}
+The transport of photons and electrons has many applications in medical
+physics and particularly in radiotherapy. Radiotherapy uses photons and
+charged particles to damage the DNA of cancerous cells, While using photons,
+free electrons are created; this ionizes the environment and creates free
+radicals that damage the cells. One quantity used to gauge whether a cell will
+die due to radiation is the absorbed dose, defined as the energy deposited per
+unit of mass. Several methods can be applied to compute the dose distribution
+in the body: semi-analytic methods, deterministic methods and Monte-Carlo
+methods. Monte-Carlo methods yield very accurate results, however they are
+slow to converge and, thus, remain too slow for effective clinical use
+\cite{acuros}. Other methods, such as pencil-beam convolution and
+convolution-superposition, employ pre-calculated Monte-Carlo dose kernels,
+which are then locally scaled to approximate photon and electron transport in
+the presence of heterogeneities. These methods present some issues in the
+presence of large density gradients, such as those found at interfaces between
+different materials: air, bone, lung and soft tissue
+\cite{acuros,seco,krieger}. If enough cells are used, deterministic methods
+can be accurate even on interfaces between materials \cite{acuros}. These
+methods are faster than Monte-Carlo methods but slower than the semi-analytic
+methods.\\
+The main purpose of the research proposed is to use deterministic methods to
+use deterministic method to compute the dose. The difficulty of this
+calculation comes from the transport of the electrons. Because the electrons
+are charged particles, they have very anisotropic scattering scattering due
+to their interactions with other particles through Coulomb interaction. This
+anisotropy causes some complications since the standard Legendre expansion
+representing the cross sections would require hundreds of terms.  A common
+approximation is to use a Dirac distribution to model the forward-peaked
+scattering of the electrons and a continuous slowing down for energy loss due
+to Coulomb interactions. This allows the Legendre expansion of the cross
+section to be kept to a low order. However, an exact integration of the Dirac
+distribution requires to use Galerkin quadratures \cite{graal} that demand a
+significant amount of memory. These quadratures need the number of flux
+moments and the number of angular fluxes to be equal and this number varies as
+$\frac{n(n+2)}{8}$ per octant with the order of the $S_n$ method. For medical
+applications, we need a method which is also fast. In this research, we will
+focus on developing a deterministic method which does not require too much
+memory, to be able to compute the dose quickly and without using too much
+memory. To decrease the time needed to compute the dose, we will parallelized
+the program and we will use an acceleration scheme. We will try several
+methods to decrease the memory need, which is a limiting factor to increase
+the number of cells and therefore the accuracy of the solution. Finally, we
+will couple the transport code to an optimization code to compute the best way
+to send the photons beams. 

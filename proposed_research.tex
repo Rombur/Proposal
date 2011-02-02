@@ -1,0 +1,161 @@
+\section{Proposed research}
+The research being proposed seeks to be able to compute the optimized position
+and intensity of the photon beams as fast as possible. To do that, we need to
+work on 3 different topics :
+\begin{itemize}
+\item massive parallelization
+\item efficient and fast algorithms to solve the transport problem
+\item optimization of the intensity of the beams 
+\end{itemize}
+
+\subsection{Massive parallelization}
+Parallelization is an important way to decrease the time needed to solve the
+transport and the optimization problem. To reach this objective, we will use
+the capabilities of the Parallel Deterministic Transport code developed at
+Texas A\&M University. 
+
+\subsection{Efficient and fast algorithms}
+This part consists in mainly several parts. The first one is the energy
+discretization. We plan to use linear discontinuous finite element for the
+energy discretization. This discretization scheme has shown good behavior
+(less oscillations than the diamond difference scheme) for the self-adjoint
+angular flux form of the equation (\ref{b-csd}) \cite{saaf} and the 
+Boltzmann-Fokker-Planck equation \cite{fem}. The second part consists in
+implementing an efficient preconditioner. The most common method to accelerate the
+convergence of the transport equation is to use a P1 Synthetic Acceleration
+scheme (P1SA) or a Diffusion Acceleration scheme (DSA) \cite{adams}. The
+problem with these methods is that they are not stable when the anisotropy is
+too large. Since in (\ref{b-csd}) we approximate the forward-peaked scattering
+of the electrons by a Dirac distribution, the anisotropy is very large. Thus,
+we will have to modify the acceleration scheme used. The acceleration scheme
+will be a P1SA scheme, which has the nice property to converge for any
+anisotropy when the medium is thick. We already studied some properties of
+this scheme when the updating method is modified \cite{russe} and when the
+number of sweeps which use the acceleration scheme is modified
+\cite{multisweep}. The results were encouraging they have to be confirmed for
+electron transport which is much more anisotropic that what we have tried. If
+the acceleration scheme remains instable while using the previous methods,
+generalisation of the Modified $P_N$ Synthetic Acceleration or the Modified
+DSA \cite{kassem} will be used. The last interesting algorithm is the
+algorithm to compute the uncollided flux in parallel. The standard algorithms
+to compute the uncollided flux are not scalable. They either require to have
+the whole mesh in memory or the processors close to the source do most of the
+work.
+
+\subsection{Optimization of the intensity of the beams}
+We have already tried several methods : active set method, penalty methods
+and simulated annealing. None of these methods give a satisfactory result
+without a good initial guess of the solution, i.e. the final solution was far
+away from the optimal solution. Thus, other methods are envisaged like the 
+use of the HOPSPACK library \cite{hopspack}, which is a package using a 
+derivative-free algorithm. At each iteration, the program generates a trial 
+point along the positive and negative direction of each coordinate axis. 
+The set of search directions are centered on the current best point and 
+initially extend a certain fixed distance. If one of these trial points 
+improves the objective function, then it becomes the new best point for 
+the next iteration. If a trial point does worse, then the step size in 
+that direction is reduced to generate a replacement trial point. The research 
+ends when the step length becomes sufficiently short in every direction. 
+Another method that we might try of the previous does not work is one based 
+on a Peano space-filling curve \cite{livre}. The idea is to reduce the 
+problem to a H\"{o}lder one-dimensional one. Having a one dimensional problem, 
+the core algorithm can be written as :
+$x$ = input and $z$ = outcome, ($z=\phi(x)$)
+\begin{itemize}
+\item Step 1 : renumber the points :
+\begin{equation}
+a=x_0 <x_1<\ldots<x_k=b
+\end{equation}
+\item Step 2 : compute the maximal slope :
+\begin{equation}
+\begin{split}
+M &= \max_{1\leq i\leq k} \left| \frac{z_i - z_{i-1}}{x_i -x_{i-1}} \right|\\
+&= \max\(M_{k-1},\frac{|z_{k+1}-z_{t-1}|}{x_{k+1}-x_{t-1}},\frac{|z_{t}-z_{k+1}|}{x_{t}-x_{k+1}}\)
+\end{split}
+\end{equation}
+\item Step 3 : Accept the estimate :
+\begin{equation}
+m =\left\{
+\begin{aligned}
+1, &\ M=0\\
+rM, &\ M>0
+\end{aligned}
+\right.
+\end{equation}
+where $r>1$ is the input of the algorithm.\\
+\item Step 4 : for each interval $(x_{i-1},x_i)$, $1\leq i \leq k$, calculate the value :
+\begin{equation}
+R(i) = m(x_i - x_{i-1}) + \frac{(z_i-z_{i-1})^2}{m(x_i-x_{i-1})}-2(z_i + z_{i-1})
+\end{equation}
+called characteristic of the interval.
+\item Step 5 : Select the interval $(x_{t-1},x_t)$ corresponding to the maximal characteristic :
+\begin{equation}
+R(t) = \max_{i\leq i \leq k} R(i)
+\end{equation} 
+if there is more than 1 solution, take the smaller integer
+\item Step 6 : Accept :
+\begin{equation}
+x^{k+1} = \frac{x_t+x_{t-1}}{2} - \frac{z_t - z_{t-1}}{2m}
+\end{equation}
+\end{itemize}
+Variants :
+\begin{itemize}
+\item Possibility to handle discontinuous function if the global minimum is not on the discontinuity. Might be necessary to change the mapping. 
+\item Global Search Mixed Algorithm\footnote{Global optimization with non-convex constraints} : uses a local refinement to check some interesting vicinity.
+\item Local tuning of the Lipschitz method : if there is a region where $L$ is large, it does not slow down the search in the region where $L$ is small. This is very important to do! We can also use better auxiliary functions than the piecewise-linear
+\item We can use higher order functions to approximate the function :
+\begin{itemize}
+\item Step 1 : renumber the points :
+\begin{equation}
+a=x_0 <x_1<\ldots<x_k=b
+\end{equation}
+\item Step 2 : compute the maximal slope :
+\begin{equation}
+M = \max\{m_i:1<i\leq k\}
+\end{equation}
+where :
+\begin{equation}
+m_i = \max
+\left\{
+\begin{aligned}
+&\frac{|z_i'-z_{i-1}'|}{x_i-x_{i-1}}\\
+&2\frac{-z_i+z_{i-1}+z_{i-1}'(x_i-x_{i-1})}{(x_i-x_{i-1})^2}\\
+&2\frac{z_i-z_{i-1}-z_i'\(x_i-x_{i-1}\)}{(x_i-x_{i-1})^2}
+\end{aligned}
+\right.
+\end{equation}
+where $z_i=\phi(x_i)$ and $z_i'=\Phi'(x_i)$
+\item Step 3 : Accept the estimate :
+\begin{equation}
+m =\left\{
+\begin{aligned}
+1, &\ M=0\\
+rM, &\ M>0
+\end{aligned}
+\right.
+\end{equation}
+where $r>1$ is the input of the algorithm.\\
+\item Step 4 : for each interval $(x_{i-1},x_i)$, $1\leq i \leq k$, calculate the value :
+\begin{equation}
+R(i) = z_{i-1} + z_{i-1}'(\hat{x}_i - x_{i-1}) -0.5m\(\hat{x}-x_{i-1}\)^2
+\end{equation}
+called characteristic of the interval and where :
+\begin{equation}
+\hat{x}_i=\frac{-z_i+z_{i-1}+z_i'x_i-z_{i-1}'x_{i-1}+0.5m\(x_i^2-x_{i-1}^2\)^2}{m\(x_i-x_{i-1}\)+z_i'-z_{i-1}'} \label{x_hat}
+\end{equation}
+\item Step 5 : Select the interval $(x_{t-1},x_t)$ corresponding to the maximal characteristic :
+\begin{equation}
+R(t) = \max_{i\leq i \leq k} R(i)
+\end{equation} 
+if there is more than 1 solution, take the smaller integer
+\item Step 6 : Accept :
+\begin{equation}
+x^{k+1} = \hat{x}_t
+\end{equation}
+where $\hat{x}_t$ is calculated according to (\ref{x_hat})
+\item We can do the local tuning here also.
+\end{itemize}
+The method works better when using a smooth approximation.
+\end{itemize}
+
+
