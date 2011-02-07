@@ -2,6 +2,7 @@ pdf:main.tex \
     introduction.tex \
     current_state.tex \
 	proposed_research.tex \
+	optimization.tex \
 	biblio.bib
 	pdflatex main.tex 
 	-bibtex main
@@ -11,6 +12,7 @@ eps: main.tex \
     introduction.tex \
     current_state.tex \
 	proposed_research.tex \
+	optimization.tex \
 	biblio.bib
 	latex main.tex 
 	-bibtex main

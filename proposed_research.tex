@@ -1,7 +1,7 @@
 \section{Proposed research}
-The research being proposed seeks to be able to compute the optimized position
+The proposed research seeks to be able to compute the optimized position
 and intensity of the photon beams as fast as possible. To do that, we need to
-work on 3 different topics :
+develop on three different topics :
 \begin{itemize}
 \item massive parallelization
 \item efficient and fast algorithms to solve the transport problem
@@ -10,152 +10,185 @@ work on 3 different topics :
 
 \subsection{Massive parallelization}
 Parallelization is an important way to decrease the time needed to solve the
-transport and the optimization problem. To reach this objective, we will use
+transport and the optimization problem. To do this, we will use
 the capabilities of the Parallel Deterministic Transport code developed at
 Texas A\&M University. 
 
 \subsection{Efficient and fast algorithms}
-This part consists in mainly several parts. The first one is the energy
+This section consists in mainly three parts. The first one is the energy
 discretization. We plan to use linear discontinuous finite element for the
 energy discretization. This discretization scheme has shown good behavior
 (less oscillations than the diamond difference scheme) for the self-adjoint
 angular flux form of the equation (\ref{b-csd}) \cite{saaf} and the 
-Boltzmann-Fokker-Planck equation \cite{fem}. The second part consists in
-implementing an efficient preconditioner. The most common method to accelerate the
-convergence of the transport equation is to use a P1 Synthetic Acceleration
-scheme (P1SA) or a Diffusion Acceleration scheme (DSA) \cite{adams}. The
-problem with these methods is that they are not stable when the anisotropy is
-too large. Since in (\ref{b-csd}) we approximate the forward-peaked scattering
-of the electrons by a Dirac distribution, the anisotropy is very large. Thus,
-we will have to modify the acceleration scheme used. The acceleration scheme
-will be a P1SA scheme, which has the nice property to converge for any
-anisotropy when the medium is thick. We already studied some properties of
-this scheme when the updating method is modified \cite{russe} and when the
-number of sweeps which use the acceleration scheme is modified
-\cite{multisweep}. The results were encouraging they have to be confirmed for
+Boltzmann-Fokker-Planck equation \cite{fem}.\\
+We need to define : 
+\begin{align}
+& \Delta E^g = E^{g-1/2} -E^{g+1/2}\\
+& E^g = \frac{E^{g-1/2}+E^{g+1/2}}{2}\\
+& \Psi^g(\br) = \int_{\Delta E^g} dE \Psi(\br,E)\\
+& \Psi(\br,E) = \Psi^{g,T}\cdot b^g \ \ \forall E \in \[E^{g+1/2},E^{g-1/2}\]\\
+& \Psi^g =
+\begin{pmatrix}
+\Psi_x^g\\
+\Psi_E^g
+\end{pmatrix}
+\ \ \forall E \in \[E^{g+1/2},E^{g-1/2}\]\\
+& b^g = 
+\begin{pmatrix}
+b_{\br}^g(\br,E)\\
+b_E^g(E)
+\end{pmatrix}
+\ \ \forall E \in \[E^{g+1/2},E^{g-1/2}\]\\
+& b_{\br}^g\(x,E\) = \frac{b_{\br}(\br)}{\Delta E^g}\ \ \forall \in
+\[E^{g+1/2},E^{g-1/2}\]\\
+& b_{\br} \textrm{ are discontinuous finite element basis functions}\\
+& b_E^g\(E\) = \frac{2}{\(\Delta E^g\)^2} \(E-E^g\)\ \ \forall \in
+\[E^{g+1/2},E^{g-1/2}\]\\
+&\lim_{E\underset{>}{\to}E^{g+1/2}} E = E^{g+1/2,+}\\
+&\lim_{E\underset{>}{\to}E^{g-1/2}} E = E^{g-1/2,+}\\
+& K \textrm{ is a cell}
+\end{align}  
+Using this energy discretization and upwind in energy, (\ref{b-csd}) becomes :
+\begin{equation}
+\begin{split}
+&\Delta E^g \oint_{\pk} \(\bo \cdot \bs{n}\) \Psi_{\br}^{g} \(b_{\br}^g(\br,E^g) 
+\cdot b_{\br}^{g,T}(\br,E^g)\) ds - \Delta E^g \int_K \(\Psi_{\br}^{g,T} \cdot 
+b_{\br}^g\(\br,E^g\)\) \(\bo_d \cdot \bn b_{\br}^{g}\(\br,E^g\)\) d\br\\
+&+ \Delta E^g \int_K \Sigma_t^g\(\br\) \Psi_{\br}^{g}\(b_{\br}^{g}(\br,E^g)\cdot 
+b_{\br}^{g,T}\(\br,E^g\)\) d\br = \int_k \sum_{g'=1}^G \sum_{l=0}^L \sum_{m=-l}^l 
+\Delta E^{g'} \frac{2l+1}{4\pi} \Sigma_{s,l}^{g'\rightarrow g}(\br)\\
+&\Phi_{l}^{m,g'} Y_m^l\(\bo_d\)\(b_{\br}^{g',T}(r,E^{g'})\cdot b_{\br}^g\(\br,E^g\)\) 
+d\br + \int_{K} d\br \(S^{g-1}(\br)\(\Psi^{g-1,T}\cdot b^{g-1}\(\br,E^{g-1/2,+}\)\)
+\right.\\
+& - S^{g}(\br) \left. \(\Psi^{g,T}\cdot b^g\(\br,E^{g+1/2,+}\)\)\) b_{\br}^g
+(\br,E^g)
+\end{split}                                   
+\end{equation}          
+\begin{equation}
+\begin{split}
+&\frac{\Psi_E^g}{3\Delta E^g} \int_K \Sigma_t(d\br) d\br =
+\sum_{l=0}^L \frac{2l+1}{4\pi} \sum_{m=l}^l \frac{\Phi_l^{m,g}
+Y_l^m\(\bo_d\)}{3} \int_K \Sigma_{s,l}^{g' \rightarrow g}\(\br\) d\br \\
+&\int_K \frac{S^{g-1}(\br)}{\Delta E^g} \(\Psi_d^{g-1,T}(\br) \cdot
+b^{g-1}(\br,E^{g-1/2})\) d\br - \int_K \frac{S^g}{\Delta E^g} \(\Psi_d^{g,T}
+\cdot b_{\br}^g (\br,E^{g+1/2}) +\Psi_E^g\) 
+\end{split}
+\end{equation}   
+The second part is to implement an efficient preconditioner. The most 
+common method to accelerate the convergence of the transport equation is to use 
+a P1 Synthetic Acceleration scheme (P1SA) or a Diffusion Acceleration scheme 
+(DSA) \cite{adams}. Next we present the P1SA equation but first let us write the primal and the adjoint angular fluxes as :
+\begin{align}
+& \Psi_m = \frac{1}{4 \pi} \left(\Phi + 3 \boldsymbol{J}\cdot
+\boldsymbol{\Omega}_m\right) \label{eq1}\\
+& \Psi_m^* = \frac{1}{4 \pi} \left(\Phi + 3 \boldsymbol{J}^*\cdot
+\boldsymbol{\Omega}_m\right) \label{eq2}
+\end{align}
+The $S_N$ variational form of the transport equation for neutral particle is given 
+by (see also \cite{jcam}) :
+\begin{equation}
+b(\Psi,\Psi^*) - \sum_{e\in\partial \mathcal{D}^r} \sum_{\boldsymbol{\Omega}_m \cdot \boldsymbol{n}_b < 0} w_m \left\langle\Psi_{m'},\Psi_m^*\right\rangle_e - \sum_{n=0}^N \sum_{k=-n}^n \frac{2n+1}{4\pi} \left(\Sigma_{s,n}\Phi_{n,k},\Phi_{n,k}^*\right)_{\mathcal{D}} = l(\Psi^*)
+\end{equation}
+where the bilinear and the linear forms are :
+\begin{equation}
+\begin{split}
+b(\Psi,\Psi^*) &= \sum_{d=1}^M w_m \left(\left(\boldsymbol{\Omega}_m \cdot \boldsymbol{\nabla}+\Sigma_t\right)\Psi_d,\Psi_d^*\right)_{\mathcal{D}} + \sum_{d=1}^M \left\langle\llbracket\Psi_d\rrbracket,\Psi_d^{*+}\right\rangle_{E_h^i}\\
+&+\sum_{e\in\partial \mathcal{D}} \sum_{\boldsymbol{\Omega}_d \cdot \boldsymbol{n}_b < 0} w_d \left\langle\Psi_d,\Psi_d^*\right\rangle_e
+\end{split}
+\end{equation}
+\begin{equation}
+l(\Psi^*) = \sum_{l=0}^L \sum_{m=-l}^l
+\left(Q_{l,m},\Phi_{l,m}^*\right)_{\mathcal{D}} + \sum_{e\in\partial
+\mathcal{D}^d} \sum_{\bo_d \cdot \boldsymbol{n}_b} w_d
+\left\langle\Psi_d^{inc},\Psi_d^*\right\rangle_e
+\end{equation}
+where :
+\begin{itemize}
+\item $\mathcal{D}$  is the domain. 
+\item $\partial\mathcal{D}$ is the boundary of the domain.
+\item $\partial\mathcal{D}^r$ is the reflective boundary of the domain.
+\item $\partial\mathcal{D}^d$ is the Dirichlet boundary of the domain.
+\item $\boldsymbol{n}_b$ is the normal vector on the domain boundary.
+\item $\Psi_d^{\pm} = \lim_{s\to 0^{\pm}} \Psi_d (\boldsymbol{r} + s \boldsymbol{\Omega}_d)$
+\item $\llbracket\Psi_d\rrbracket = \Psi_d^+ - \Psi_d^-$ is the inter element jump.
+\item $E_h^i$ is the set of all interior edges.
+\item $(f,g)_{\mathcal{D}} = \sum_{K \in \mathcal{T}} (f,g)_K$ with  $(f,g)_K = \int_K f\ g\ d\mathbf{r}$
+\item $\left\langle f,g\right\rangle_{\mathcal{D}} = \sum_{e \in \mathcal{E}_h^i} \left\langle f,g\right\rangle_e$ with  $\left\langle f,g\right\rangle_e = \int_e \left| \boldsymbol{\Omega}_m \cdot \boldsymbol{n}(\mathbf{r})\right| ds$
+\item $Q_{l,m}$ are the moments volumetric source (scattering and fixed external source).
+\end{itemize}
+Using (\ref{eq1}) and (\ref{eq2}) in the bilinear and  linear form, we find
+after some algebra :
+\begin{equation}
+b\left(\Phi,\boldsymbol{J},\Phi^*,\boldsymbol{J}^*\right) = l\left(\Phi^*,\boldsymbol{J}^*\right)
+\label{P1SA}
+\end{equation}
+with :
+\begin{equation}
+\begin{split}
+b(\Phi,\boldsymbol{J},\Phi^*,\boldsymbol{J}^*) &= \left(\Sigma_a \Phi,\Phi^*\right)_D + \left(3\Sigma_{tr} \boldsymbol{J},\boldsymbol{J}^*\right)_D+\left(\boldsymbol{\nabla} \Phi,\boldsymbol{J}^*\right)_D - \left(\boldsymbol{J},\boldsymbol{\nabla} \Phi^*\right)_D\\
+&+ \frac{1}{4} \left(\llbracket\Phi\rrbracket,\llbracket\Phi^*\rrbracket\right)_{E_h^i}+\left(\llbracket\Phi\rrbracket,\ldb\boldsymbol{J}^*\rdb\cdot\boldsymbol{n}\right)_{E_h^i} -
+\left(\ldb\boldsymbol{J}\cdot\boldsymbol{n}\rdb,\llbracket\Phi^*\rrbracket\right)_{E_h^i}\\
+& + \frac{9}{16}\left(\llbracket \boldsymbol{J}\cdot\boldsymbol{n}\rrbracket,\llbracket \boldsymbol{J}^*\cdot\boldsymbol{n}\rrbracket\right)_{E_h^i} + \frac{9}{16}\left(\llbracket\boldsymbol{J}\rrbracket, \llbracket \boldsymbol{J}^*\rrbracket\right)_{E_h^i}\\
+&+\frac{1}{4}\left(\Phi,\Phi^*\right)_{\partial D^d} + \frac{1}{2} \left(\Phi,\boldsymbol{J}\cdot \boldsymbol{n}\right)_{\partial D^d} - \frac{1}{2}\left(\boldsymbol{J}\cdot\boldsymbol{n},\Phi^*\right)_{\partial D^d}\\
+&+\frac{9}{16}\left(\boldsymbol{J},\boldsymbol{J}^*\right)_{\partial D^d} + \frac{9}{16}\left(\boldsymbol{J}\cdot\boldsymbol{n},\boldsymbol{J}^*\cdot\boldsymbol{n}\right)_{\partial D^d}+\frac{9}{4} \left(\boldsymbol{J}\cdot\boldsymbol{n}, \boldsymbol{J}\cdot\boldsymbol{n}\right)_{\partial D^r}
+\end{split}
+\end{equation}
+and :
+\begin{equation}
+l(\Phi^*,\boldsymbol{J}^*) = \left(Q_0,\Phi^*\right)_D + \left(3\boldsymbol{Q}_1,\boldsymbol{J}^*\right)_D + \left(J^{inc},\Phi^*\right)_{\partial D^d} - \left(\boldsymbol{\Upsilon}^{inc},\boldsymbol{J}^*\right)_{\partial D^d}
+\end{equation}
+where $Q_0$ is the zeroth moment of the source, $\boldsymbol{Q}_1$ is the first moment of the source :
+\begin{equation}
+J^{inc} = -\sum_{\boldsymbol{\Omega}_d \cdot \boldsymbol{n}(\boldsymbol{r}_b)<0} w_d |\boldsymbol{\Omega}_d \cdot \boldsymbol{n}\left(\boldsymbol{r}_b)\right)| \Psi_d^{inc}
+\end{equation}
+$\Phi^d$ is the flux on the Dirichlet boundary and :
+\begin{equation}
+\boldsymbol{\Upsilon} = - \sum_{\boldsymbol{\Omega}_d \cdot \boldsymbol{n}(\boldsymbol{r}_b)<0} 3w_d\boldsymbol{\Omega}_d |\boldsymbol{\Omega}_d \cdot \boldsymbol{n}\left(\boldsymbol{r}_b)\right)| \Psi_d^{inc}
+\end{equation}
+The problem with the P1SA or the DSA methods is that they are not stable when the 
+anisotropy is too large. The acceleration scheme that we presented converges for 
+any anisotropy when the medium is thick but not when
+the cells are thin. Since in (\ref{b-csd}) we approximate the 
+forward-peaked scattering of the electrons by a Dirac distribution, the 
+anisotropy is very large. Thus, we will have to modify the acceleration scheme 
+used. We already studied some 
+properties of this scheme when the updating method is modified \cite{russe} and 
+when the number of sweeps, which use the acceleration scheme, has been modified
+\cite{multisweep}. The results were encouraging but they have to be confirmed for
 electron transport which is much more anisotropic that what we have tried. If
 the acceleration scheme remains instable while using the previous methods,
 generalisation of the Modified $P_N$ Synthetic Acceleration or the Modified
-DSA \cite{kassem} will be used. The last interesting algorithm is the
-algorithm to compute the uncollided flux in parallel. The standard algorithms
-to compute the uncollided flux are not scalable. They either require to have
-the whole mesh in memory or the processors close to the source do most of the
-work.
+DSA \cite{kassem} will be used.\\
+The last interesting algorithm is the algorithm to compute the uncollided flux 
+in parallel. The standard algorithms to compute the uncollided flux are not 
+scalable. They either require to have the whole mesh in memory or the processors 
+close to the source do most of the work.\\ 
+The first collision source can be easily expressed mathematically by rewriting 
+(\ref{b-csd}) using operator notation :
+\begin{align}
+&L \Psi = H \Phi + Q\\
+&\Psi = \Psi^{inc}
+\end{align}
 
-\subsection{Optimization of the intensity of the beams}
-We have already tried several methods : active set method, penalty methods
-and simulated annealing. None of these methods give a satisfactory result
-without a good initial guess of the solution, i.e. the final solution was far
-away from the optimal solution. Thus, other methods are envisaged like the 
-use of the HOPSPACK library \cite{hopspack}, which is a package using a 
-derivative-free algorithm. At each iteration, the program generates a trial 
-point along the positive and negative direction of each coordinate axis. 
-The set of search directions are centered on the current best point and 
-initially extend a certain fixed distance. If one of these trial points 
-improves the objective function, then it becomes the new best point for 
-the next iteration. If a trial point does worse, then the step size in 
-that direction is reduced to generate a replacement trial point. The research 
-ends when the step length becomes sufficiently short in every direction. 
-Another method that we might try of the previous does not work is one based 
-on a Peano space-filling curve \cite{livre}. The idea is to reduce the 
-problem to a H\"{o}lder one-dimensional one. Having a one dimensional problem, 
-the core algorithm can be written as :
-$x$ = input and $z$ = outcome, ($z=\phi(x)$)
-\begin{itemize}
-\item Step 1 : renumber the points :
-\begin{equation}
-a=x_0 <x_1<\ldots<x_k=b
-\end{equation}
-\item Step 2 : compute the maximal slope :
-\begin{equation}
-\begin{split}
-M &= \max_{1\leq i\leq k} \left| \frac{z_i - z_{i-1}}{x_i -x_{i-1}} \right|\\
-&= \max\(M_{k-1},\frac{|z_{k+1}-z_{t-1}|}{x_{k+1}-x_{t-1}},\frac{|z_{t}-z_{k+1}|}{x_{t}-x_{k+1}}\)
-\end{split}
-\end{equation}
-\item Step 3 : Accept the estimate :
-\begin{equation}
-m =\left\{
-\begin{aligned}
-1, &\ M=0\\
-rM, &\ M>0
-\end{aligned}
-\right.
-\end{equation}
-where $r>1$ is the input of the algorithm.\\
-\item Step 4 : for each interval $(x_{i-1},x_i)$, $1\leq i \leq k$, calculate the value :
-\begin{equation}
-R(i) = m(x_i - x_{i-1}) + \frac{(z_i-z_{i-1})^2}{m(x_i-x_{i-1})}-2(z_i + z_{i-1})
-\end{equation}
-called characteristic of the interval.
-\item Step 5 : Select the interval $(x_{t-1},x_t)$ corresponding to the maximal characteristic :
-\begin{equation}
-R(t) = \max_{i\leq i \leq k} R(i)
-\end{equation} 
-if there is more than 1 solution, take the smaller integer
-\item Step 6 : Accept :
-\begin{equation}
-x^{k+1} = \frac{x_t+x_{t-1}}{2} - \frac{z_t - z_{t-1}}{2m}
-\end{equation}
-\end{itemize}
-Variants :
-\begin{itemize}
-\item Possibility to handle discontinuous function if the global minimum is not on the discontinuity. Might be necessary to change the mapping. 
-\item Global Search Mixed Algorithm\footnote{Global optimization with non-convex constraints} : uses a local refinement to check some interesting vicinity.
-\item Local tuning of the Lipschitz method : if there is a region where $L$ is large, it does not slow down the search in the region where $L$ is small. This is very important to do! We can also use better auxiliary functions than the piecewise-linear
-\item We can use higher order functions to approximate the function :
-\begin{itemize}
-\item Step 1 : renumber the points :
-\begin{equation}
-a=x_0 <x_1<\ldots<x_k=b
-\end{equation}
-\item Step 2 : compute the maximal slope :
-\begin{equation}
-M = \max\{m_i:1<i\leq k\}
-\end{equation}
-where :
-\begin{equation}
-m_i = \max
-\left\{
-\begin{aligned}
-&\frac{|z_i'-z_{i-1}'|}{x_i-x_{i-1}}\\
-&2\frac{-z_i+z_{i-1}+z_{i-1}'(x_i-x_{i-1})}{(x_i-x_{i-1})^2}\\
-&2\frac{z_i-z_{i-1}-z_i'\(x_i-x_{i-1}\)}{(x_i-x_{i-1})^2}
-\end{aligned}
-\right.
-\end{equation}
-where $z_i=\phi(x_i)$ and $z_i'=\Phi'(x_i)$
-\item Step 3 : Accept the estimate :
-\begin{equation}
-m =\left\{
-\begin{aligned}
-1, &\ M=0\\
-rM, &\ M>0
-\end{aligned}
-\right.
-\end{equation}
-where $r>1$ is the input of the algorithm.\\
-\item Step 4 : for each interval $(x_{i-1},x_i)$, $1\leq i \leq k$, calculate the value :
-\begin{equation}
-R(i) = z_{i-1} + z_{i-1}'(\hat{x}_i - x_{i-1}) -0.5m\(\hat{x}-x_{i-1}\)^2
-\end{equation}
-called characteristic of the interval and where :
-\begin{equation}
-\hat{x}_i=\frac{-z_i+z_{i-1}+z_i'x_i-z_{i-1}'x_{i-1}+0.5m\(x_i^2-x_{i-1}^2\)^2}{m\(x_i-x_{i-1}\)+z_i'-z_{i-1}'} \label{x_hat}
-\end{equation}
-\item Step 5 : Select the interval $(x_{t-1},x_t)$ corresponding to the maximal characteristic :
-\begin{equation}
-R(t) = \max_{i\leq i \leq k} R(i)
-\end{equation} 
-if there is more than 1 solution, take the smaller integer
-\item Step 6 : Accept :
-\begin{equation}
-x^{k+1} = \hat{x}_t
-\end{equation}
-where $\hat{x}_t$ is calculated according to (\ref{x_hat})
-\item We can do the local tuning here also.
-\end{itemize}
-The method works better when using a smooth approximation.
-\end{itemize}
+\begin{align}
+&L \(\Psi^u + \Psi^c\) = H \(\Phi^u + \Phi^c\) + Q\\
+&\Psi^u + \Psi^c = \Psi^{inc}
+\end{align}
+That we can rewrite :
+\begin{align}
+& L\Psi^u = 0\\
+& \Psi^u = \Psi^{inc}
+\end{align}
 
+\begin{align}
+& L\Psi^c = H \Phi^u + H\Phi^c + Q \label{last}\\
+& \Psi^c = 0
+\end{align}
 
+If we have several groups, we can rewrite (\ref{last}) :
+\begin{equation}
+L \Psi^{c,g} = H \Phi^{c,g} + H \Phi ^{u,g} + \sum_{g'\neq g}H\Phi^{g'}+Q
+\end{equation}
+
+% Optimization part
+\input{optimization}

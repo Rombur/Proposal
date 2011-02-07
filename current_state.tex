@@ -1,15 +1,15 @@
 \section{Current state of the problem}
-There are 2 parts of the problem. First, we nee to solve the transport
-equation for the photons and the electrons and then, we need to solve an
+There are two parts of the problem. First, we need to solve the transport
+equation for the photons and the electrons and then, we need to solve the
 optimization problem.
 \subsection{Transport equation for the photons and the electrons}
 The equation that we want to solve is the Boltzmann-CSD equation (the
 variables are omitted for \hbox{brevity) :}
 \begin{equation}
 \begin{split}
-\bo \cdot \bn \Psi + \Sigma_t \Psi &= \int_{4\pi}\int_0^{\infty}
-\Sigma_s\(\bo\cdot\bo', E'\rightarrow E\)\Psi\(\bo',E'\)dE' d\bo'\\
-&+\frac{\partial S \Psi}{\partial E} +Q
+\bo \cdot \bn \Psi + \Sigma_t \Psi = \int_{4\pi}\int_0^{\infty}
+\Sigma_s\(\bo\cdot\bo', E'\rightarrow E\)\Psi\(\bo',E'\)dE' d\bo'+
+\frac{\partial S \Psi}{\partial E} +Q
 \label{b-csd}
 \end{split}
 \end{equation}
@@ -21,6 +21,7 @@ section
 \item $\Sigma_s$ is the smooth-component of the macroscopic differential
 scattering cross section
 \item $Q$ is a volumetric source
+\item $\bo = (\mu,\phi)$
 \item $\mu$ is the cosine of the directional polar angle
 \item $\phi$ is the directional azimuthal angle
 \item $S$ is the restricted stopping power :
@@ -47,24 +48,29 @@ conditions are applied and $\partial \mathcal{D}_i$ is the boundary of the
 domain where incoming flux conditions are applied.\\
 The state-of-art for deterministic electron-photon calculation is the code
 Acuros\cite{acuros}. It employs linear discontinuous finite-element on
-unstructured mesh consisting of tetrahedral elements. It uses a discrete ordinates
-method with analytical uncollided flux. It uses adaptive mesh refinement. The
+unstructured mesh consisting of tetrahedral elements and an adaptive mesh
+refinement method. It uses a discrete ordinates for the angular discretization 
+and compute the first
+collision source by computing an analytical uncollided flux. The
 energy discretization is done with standard multigroup method and the
 energy derivative of the CSD operator is discretized using linear
 discontinuous finite-element.
 
-\subsubsection{Optimization problem}
+\subsection{Optimization problem}
 The modern radiotherapy uses the Intensity Modulated Radiation Therapy (IMRT) as 
-one of the methods to treat cancer. IMRT allows to have several beams with 
-different intensity profiles. The goal is to give a sufficient dose to the tumor 
-while sparing healthy organs. To optimize the intensity profile, it is very common 
-to divide the beams in small beamlets. Each beamlet has a constant intensity. In a 
-real application, the number of beamlets is around a thousand. 
+one of the methods to treat cancer. IMRT allows several beams with 
+different intensity profiles and the goal is to deliver a sufficient dose to the 
+tumor while sparing healthy organs. To optimize the intensity profile, it is very 
+common to divide the beams in small beamlets, each of them having a constant 
+intensity. In a real application, the number of beamlets is around a thousand. 
 
 This problem is very complex and a lot of objective functions and constraints 
-\cite{math}, \cite{complexity}, \cite{minima},\cite{dose-volume} have been 
-proposed. Moreover, there is a lot of methods \cite{dose-volume} used to solve 
-these optimization problems.
+\cite{math,complexity,minima,dose-volume} have been 
+proposed. Moreover, there are a lot of methods \cite{dose-volume} used to solve 
+these optimization problems such as Monte-Carlo method with steepest descent
+\cite{complexity}, linear programming, filtered back-projection, simulated
+annealing, dynamically penalized likelihood, projections onto convex, active
+set method and simulated dynamics\cite{dose-volume}.
 
 The most used objective function is :
 \begin{equation}
@@ -74,10 +80,10 @@ The most used objective function is :
 where $\delta_{ij}$ is the prescribed dose for the voxel $ijk$, $D_{ijk}$ is the
 actual dose for the voxel and $\mathcal{T}$ is the tumor. 
 
-So we want to minimize the difference between the planned dose and the dose in the 
-tumor. The constraints used are dose-volume constraints \cite{complexity}, 
-\cite{minima} and \cite{dose-volume}. The idea is that we do not want have more than 
-a given percentage of the volume of an organ to receive more than a given dose. 
+This objective function tries to to minimize the difference between the planned 
+dose and the dose in the tumor. The constraints used are dose-volume constraints
+\cite{complexity,minima,dose-volume}. The idea is that we do not want to have more 
+than a given percentage of the volume of an organ to receive more than a given dose. 
 Mathematically, we have for each constraint :
 \begin{equation} 
 \sum_{ijk \in \mathcal{D}} \nu\(D_{ijk}-\delta_{ijk}\)\frac{V_{ijk}}{V} \leq \gamma
@@ -93,14 +99,11 @@ D_{ij} \geq 0
 \end{equation}
 
 It is well known that even if the objective function is convex, the problem has 
-several local minima \cite{minima}. The reason is that the domain is not convex. 
-The number of local minima can increase factorially with the number of beamlets. 
-Since we can have more than a thousand of beamlets, we see that the number of local 
-minima can be huge. We can also write the problem as a mixed-integer linear problem. 
-This kind of problem does not have the problem of having a lot of local minima but 
-the calculation time can be prohibitive \cite{minima}. Among the methods which
-have been used, there is Monte-Carlo method with steepest descent
-\cite{complexity}, linear programming, filtered back-projection, simulated
-annealing, dynamically penalized likelihood, projections onto convex, active
-set method and simulated dynamics\cite{dose-volume}. 
+several local minima \cite{minima}. The reason is that because the domain is not 
+convex, the number of local minima can increase factorially with the number of 
+beamlets. Since we can have more than a thousand beamlets, the 
+number of local minima can be large. To avoid the local minima problem, 
+we can rewrite the optimization problem as a mixed-integer linear problem. 
+This does not have local minima but the calculation time can be prohibitive 
+\cite{minima}.  
 
